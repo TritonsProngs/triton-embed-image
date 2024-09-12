@@ -1,17 +1,21 @@
 name: triton-embed_image-development-env
 channels:
-  - defaults
+  - pytorch
+  - nvidia
   - conda-forge
- dependencies:
-   - python=3.10
-   - ipython
-   - jupyter
-   - tritonclient
-   - tritonclient-http
-   - tritonclient-grpc
-   - isort
-   - black
-   - autoflake
-   - pip
+dependencies:
+  - python ==3.12.5
+  - numpy ==1.26.4
+  - protobuf
+  - pytorch ==2.3.1
+  - pytorch-cuda ==12.1
+  - transformers ==4.42.4
+  - accelerate ==0.32.1
+  - sentencepiece ==0.2.0
+  - scikit-learn
+  - requests
+  - ipython
+  - ruff
+  - pip
    #- pip:
      # pip deps
