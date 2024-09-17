@@ -153,31 +153,45 @@ sdk-container:/workspace perf_analyzer \
 Gives the following result on an RTX4090 GPU
 
 * Request concurrency: 60
-  * Pass [1] throughput: 115.371 infer/sec. Avg latency: 516063 usec (std 23282 usec). 
-  * Pass [2] throughput: 115.021 infer/sec. Avg latency: 518681 usec (std 60638 usec). 
-  * Pass [3] throughput: 116.648 infer/sec. Avg latency: 512635 usec (std 58592 usec). 
+  * Pass [1] throughput: 106.079 infer/sec. Avg latency: 559689 usec (std 80840 usec). 
+  * Pass [2] throughput: 105.892 infer/sec. Avg latency: 560359 usec (std 78572 usec). 
+  * Pass [3] throughput: 106.605 infer/sec. Avg latency: 561092 usec (std 36593 usec). 
   * Client: 
-    * Request count: 8330
-    * Throughput: 115.68 infer/sec
+    * Request count: 7647
+    * Throughput: 106.192 infer/sec
     * Avg client overhead: 0.01%
-    * Avg latency: 515779 usec (standard deviation 18539 usec)
-    * p50 latency: 512234 usec
-    * p90 latency: 529239 usec
-    * p95 latency: 578307 usec
-    * p99 latency: 922477 usec
-    * Avg gRPC time: 515768 usec (marshal 15 usec + response wait 515753 usec + unmarshal 0 usec)
+    * Avg latency: 560381 usec (standard deviation 47567 usec)
+    * p50 latency: 622120 usec
+    * p90 latency: 640834 usec
+    * p95 latency: 649638 usec
+    * p99 latency: 674177 usec
+    * Avg gRPC time: 560368 usec (marshal 12 usec + response wait 560356 usec + unmarshal 0 usec)
   * Server: 
-    * Inference count: 8330
-    * Execution count: 146
-    * Successful request count: 8330
-    * Avg request latency: 516205 usec (overhead 355961 usec + queue 58204 usec + compute 102040 usec)
+    * Inference count: 7647
+    * Execution count: 1083
+    * Successful request count: 7647
+    * Avg request latency: 562443 usec (overhead 321345 usec + queue 44959 usec + compute 196139 usec)
 
   * Composing models: 
   * siglip_vision, version: 1
-      * Inference count: 8373
-      * Execution count: 1046
-      * Successful request count: 8373
-      * Avg request latency: 160259 usec (overhead 15 usec + queue 58204 usec + compute input 1943 usec + compute infer 99988 usec + compute output 108 usec)
+      * Inference count: 7687
+      * Execution count: 7687
+      * Successful request count: 7687
+      * Avg request latency: 238418 usec (overhead 0 usec + queue 44959 usec + compute 196139 usec)
+
+    * Composing models: 
+    * siglip_vision_model, version: 1
+        * Inference count: 7687
+        * Execution count: 1100
+        * Successful request count: 7687
+        * Avg request latency: 174775 usec (overhead 11 usec + queue 42060 usec + compute input 2757 usec + compute infer 129945 usec + compute output 2 usec)
+
+    * siglip_vision_process, version: 1
+        * Inference count: 7707
+        * Execution count: 2623
+        * Successful request count: 7707
+        * Avg request latency: 66355 usec (overhead 21 usec + queue 2899 usec + compute input 194 usec + compute infer 63239 usec + compute output 2 usec)
 
 * Inferences/Second vs. Client Average Batch Latency
-* Concurrency: 60, throughput: 115.68 infer/sec, latency 515779 usec
+* Concurrency: 60, throughput: 106.192 infer/sec, latency 560381 usec
+
