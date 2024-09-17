@@ -1,0 +1,34 @@
+name: "siglip_vision_process"
+backend: "python"
+max_batch_size: 32
+default_model_filename: "siglip_vision_process.py"
+
+input [
+    {
+        name: "INPUT_IMAGE"
+        data_type: TYPE_STRING
+        dims: [1]
+    }
+]
+output [
+    {
+        name: "PIXEL_VALUES"
+        data_type: TYPE_FP32
+        dims: [3, 384, 384]
+    }
+]
+
+parameters: [
+    {
+        key: "EXECUTION_ENV_PATH",
+        value: {string_value: "$$TRITON_MODEL_DIRECTORY/siglip_vision_process.tar.gz"},
+    }
+]
+instance_group [
+    {
+        kind: KIND_CPU,
+        count: 1
+    }
+]
+version_policy: {latest: {num_versions: 1}}
+dynamic_batching: {}

@@ -1,4 +1,4 @@
-name: embed_image
+name: siglip_vision_process
 channels:
     - pytorch
     - conda-forge

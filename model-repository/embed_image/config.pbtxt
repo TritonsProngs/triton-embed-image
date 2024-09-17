@@ -20,10 +20,6 @@ output [
 
 parameters: [
     {
-        key: "EXECUTION_ENV_PATH",
-        value: {string_value: "$$TRITON_MODEL_DIRECTORY/embed_image.tar.gz"},
-    },
-    {
         key: "default_embed_model",
         value: {string_value: "siglip_vision"},
     },
@@ -35,7 +31,7 @@ parameters: [
 instance_group [
     {
         kind: KIND_CPU,
-        count: 1
+        count: 3
     }
 ]
 version_policy: {latest: {num_versions: 1}}
