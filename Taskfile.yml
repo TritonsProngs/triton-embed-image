@@ -16,8 +16,8 @@ tasks:
     cmds:
       - docker compose -f docker-compose.yml --profile {{.COMPUTE_TYPE}} up -d
     preconditions:
-      - test -f ./model-repository/embed_image/embed_image.tar.gz
-      - test -f ./model-repository/siglip_vision/siglip_vision.tar.gz
+      - test -f ./model-repository/siglip_vision_process/siglip_vision_process.tar.gz
+      - test -f ./model-repository/siglip_vision_model/siglip_vision_model.tar.gz
 
 
   triton-stop:
@@ -37,7 +37,7 @@ tasks:
 
   build-execution-env-all:
     desc: "Taks to build all execution environments"
-    deps: [build-embed_image-env, build-siglip_vision-env]
+    deps: [build-siglip_vision_process-env, build-siglip_vision_model-env]
 
   build-*-env:
     vars:

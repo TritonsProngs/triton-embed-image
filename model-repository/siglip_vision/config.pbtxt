@@ -1,13 +1,12 @@
 name: "siglip_vision"
-backend: "python"
+platform: "ensemble"
 max_batch_size: 32
-default_model_filename: "siglip_vision.py"
 
 input [
     {
-        name: "PIXEL_VALUES"
-        data_type: TYPE_FP32
-        dims: [3, 384, 384]
+        name: "INPUT_IMAGE"
+        data_type: TYPE_STRING
+        dims: [1]
     }
 ]
 output [
@@ -18,45 +17,35 @@ output [
     }
 ]
 
-parameters: [
-    {
-        key: "EXECUTION_ENV_PATH",
-        value: {string_value: "$$TRITON_MODEL_DIRECTORY/siglip_vision.tar.gz"},
-    }
-]
-instance_group [
-    {
-        kind: KIND_AUTO,
-        count: 1
-    }
-]
-version_policy: {latest: {num_versions: 1}}
-dynamic_batching: {}
-model_warmup: [
-    {
-        name: "batch_size_1"
-        count: 5
-        batch_size: 1
-        inputs: {
-            key: "PIXEL_VALUES"
-            value: {
-                data_type: TYPE_FP32
-                dims: [3, 384, 384]
-                random_data: true
+ensemble_scheduling: {
+    step: [
+        {
+            model_name: "siglip_vision_process"
+            model_version: -1
+            input_map {
+                key: "INPUT_IMAGE"
+                value: "INPUT_IMAGE"
+            }
+            output_map [
+                {
+                    key: "PIXEL_VALUES"
+                    value: "PIXEL_VALUES"
+                }
+            ]
+        },
+        {
+            model_name: "siglip_vision_model"
+            model_version: -1
+            input_map [
+                {
+                    key: "PIXEL_VALUES"
+                    value: "PIXEL_VALUES"
+                }
+            ]
+            output_map {
+                key: "EMBEDDING"
+                value: "EMBEDDING"
             }
         }
-    },
-    {
-        name: "batch_size_2"
-        count: 5
-        batch_size: 2
-        inputs: {
-            key: "PIXEL_VALUES"
-            value: {
-                data_type: TYPE_FP32
-                dims: [3, 384, 384]
-                random_data: true
-            }
-        }
-    }
-]
+    ]
+}
