@@ -1,12 +1,18 @@
 # Embed Image
 This is a BLS deployment that lets a client send an image and get back a vector
 embedding. Currently this only uses the [SigLIP Vision](siglip_vision.md) model, but
-future embedding models could be added.
+future embedding models may be added.
 
 Because dynamic batching has been enabled for these Triton Inference Server
 deployments, clients simply send each request separately. This simplifies the code for
 the client, see examples below, yet they reap the benefits of batched processing. In
 addition, this allows for controlling the GPU RAM consumed by the server.
+
+Optional Request Parameters:
+* `base64_encoded`: If `true`, the image is sent as a base64 encoded string. If `false`,
+  the image is sent as raw bytes. Default is `false`.
+* `embed_model`: The model to use for embedding. Currently only `siglip_vision` is
+  supported. Default is `siglip_vision`.
 
 ## Example Request
 ### Raw Image
@@ -21,6 +27,7 @@ Here's an example of sending a raw image. Just a few things to point out
 ```
 import numpy as np
 import requests
+from uuid import uuid4
 
 base_url = "http://localhost:8000/v2/models"
 
@@ -55,6 +62,7 @@ Here's an example of sending a base64 encoded image. Just a few things to point 
 ```
 import base64
 import requests
+from uuid import uuid4
 
 base_url = "http://localhost:8000/v2/models"
 
@@ -64,7 +72,8 @@ with open(image_path, "rb") as f:
 image_b64_str = base64.b64encode(image_bytes).decode("UTF-8")
 
 inference_request = {
-    "parameters": {"base64_encoded": True},  # **MUST SET THIS**
+    "parameters": {"base64_encoded": True},
+    "id": uuid4().hex,
     "inputs": [
         {
             "name": "INPUT_IMAGE",
@@ -94,6 +103,7 @@ completed.
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import numpy as np
 from pathlib import Path
+from uuid import uuid4
 import requests
 
 base_url = "http://localhost:8000/v2/models"

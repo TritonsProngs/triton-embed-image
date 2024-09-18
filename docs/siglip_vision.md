@@ -1,8 +1,16 @@
 # SigLIP Vision
-This deployment hosts the [SigLIP](https://huggingface.co/google/siglip-so400m-patch14-384)
-vision model. It takes in the RGB pixel values for images that have been resized to 384x384
-and returns the embedding vector (d=1152) that can be used for zero/few-shot image
-classification. Both the input and output are float32.
+This deployment is a
+[Triton Inference Server ensemble](https://docs.nvidia.com/deeplearning/triton-inference-server/user-guide/docs/user_guide/architecture.html#ensemble-models)
+that serves the [SigLIP](https://huggingface.co/google/siglip-so400m-patch14-384)
+vision model. It takes in the raw image bytes and returns the embedding vector (d=1152)
+that can be used for zero/few-shot image classification.
+
+The ensemble is made up of the following stages. Code is available in the
+[model_repository](../model_repository) directory:
+* siglip_vision_process: Takes the raw image bytes and returns the RGB pixel values
+  for images that have been resized to 384x384. This is done on the CPU
+* siglip_vision: The vision model that takes in the RGB pixel values for 384x384 images
+  and returns the embedding vector (d=1152). This is done on the GPU
 
 Dynamic batching is enabled for this deployment, so clients simply send in a single
 image to be embedded.
@@ -11,142 +19,12 @@ This is a lower level of abstraction, most clients likely should be using
 [embed_image](embed_image.md) deployment.
 
 ## Example Request
-Here's an example request that just uses random data. Just a few things to point out
-1. "shape": [1, 3, 384, 384] because we have dynamic batching and the first axis is
-   the batch size, second axis is RGB channels, third/fourth are the heigh/width
-2. "data": this should be "row" flattened. It will be reshaped by the server. Also,
-   numpy is not serializable, so convert to python list.
+Requests work the same as the [embed_image](embed_image.md) deployment except that
+there is no optional base64 encoded image option.
 
-```
-import numpy as np
-import requests
-
-base_url = "http://localhost:8000/v2/models"
-rng = np.random.default_rng()
-
-pixel_values_np = rng.normal(
-    loc=0.5, scale=0.5, size=[1, 3, 384, 384]
-).astype(np.float32)
-
-inference_request = {
-    "inputs": [
-        {
-            "name": "PIXEL_VALUES",
-            "shape": [1, 3, 384, 384],
-            "datatype": "FP32",
-            "data": pixel_values_np.flatten().tolist(),
-        }
-    ]
-}
-siglip_vision_response = requests.post(
-    url=f"{base_url}/siglip_vision/infer",
-    json=inference_request,
-).json()
-
-embedding = np.array(
-    siglip_vision_response["outputs"][0]["data"],
-    dtype=np.float32
-)
-```
-
-### Sending Many Images
-If you want to send a lot of image pixels to be embedded, it's important that you send
-each image request in a multithreaded way to achieve optimal throughput. The example
-below creates 120 random pixel values to be embedded.
-
-NOTE: You will encounter a OSError Too many open files if you send a lot of requests.
-Typically the default ulimit is 1024 on most system. Either increaces this using 
-`ulimit -n {n_files}`, or don't create too many futures before you process them when
-completed.
-
-```
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import numpy as np
-from pathlib import Path
-import requests
-
-base_url = "http://localhost:8000/v2/models"
-rng = np.random.default_rng()
-
-pixel_values_batch = rng.normal(
-    loc=0.5, scale=0.5, size=[60, 3, 384, 384]
-).astype(np.float32)
-
-
-futures = {}
-embeddings = {}
-with ThreadPoolExecutor(max_workers=60) as executor:
-    for i, pixel_values in enumerate(pixel_values_batch):
-        inference_request = {
-            "inputs": [
-                {
-                    "name": "PIXEL_VALUES",
-                    "shape": [1, 3, 384, 384],
-                    "datatype": "FP32",
-                    "data": pixel_values.flatten().tolist(),
-                }
-            ]
-        }
-        future = executor.submit(requests.post,
-            url=f"{base_url}/siglip_vision/infer",
-            json=inference_request,
-        )
-        futures[future] = i
-    
-    for future in as_completed(futures):
-        try:
-            response = future.result()
-        except Exception as exc:
-            print(f"{futures[future]} threw {exc}")
-        else:
-            try:
-                data = response.json()["outputs"][0]["data"]
-                embedding = np.array(data, dtype=np.float32)
-                embeddings[futures[future]] = embedding
-            except Exception as exc:
-                raise ValueError(f"Error getting data from response: {exc}")
-
-print(embeddings)
-```
 ## Performance Analysis
-There is some data in [data/siglip_vision](../data/siglip_vision/pixel_values.json)
-which can be used with the `perf_analyzer` CLI in the Triton Inference Server SDK
-container.
-
-```
-sdk-container:/workspace perf_analyzer \
-    -m siglip_vision \
-    -v \
-    --input-data data/siglip_vision/pixel_values.json \
-    --measurement-mode=time_windows \
-    --measurement-interval=20000 \
-    --concurrency-range=60 \
-    --latency-threshold=1000
-```
-Gives the following result on an RTX4090 GPU
-
-* Request concurrency: 60
-  * Pass [1] throughput: 121.352 infer/sec. Avg latency: 488315 usec (std 21956 usec). 
-  * Pass [2] throughput: 122.477 infer/sec. Avg latency: 487771 usec (std 4739 usec). 
-  * Pass [3] throughput: 123.644 infer/sec. Avg latency: 486538 usec (std 4041 usec). 
-  * Client: 
-    * Request count: 8821
-    * Throughput: 122.491 infer/sec
-    * Avg client overhead: 0.16%
-    * Avg latency: 487536 usec (standard deviation 13141 usec)
-    * p50 latency: 486777 usec
-    * p90 latency: 494846 usec
-    * p95 latency: 497160 usec
-    * p99 latency: 523129 usec
-    * Avg HTTP time: 487520 usec (send 979 usec + response wait 486541 usec + receive 0 usec)
-  * Server: 
-    * Inference count: 8821
-    * Execution count: 295
-    * Successful request count: 8821
-    * Avg request latency: 478045 usec (overhead 25 usec + queue 233130 usec + compute input 8070 usec + compute infer 236598 usec + compute output 221 usec)
-
-* Inferences/Second vs. Client Average Batch Latency
-* Concurrency: 60, throughput: 122.491 infer/sec, latency 487536 usec
+Triton Inference Server's perf_analyzer does not seem to support sending in raw
+bytes easily. See [embed_image](embed_image.md) for performance testing.
 
 ## Validation
 To validate that the model is performing as expected, we use some data from
